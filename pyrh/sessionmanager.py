@@ -182,7 +182,7 @@ class SessionManager(object):
             "Authorization" in self.session.headers and datetime.now() < self.expires_at
         )
 
-    def login(self, force_refresh: bool = False) -> None:
+    def login(self, force_refresh: bool = False, mfa_code=None) -> None:
         """Login to the session.
 
         This method logs the user in if they are not already and otherwise refreshes
@@ -194,7 +194,7 @@ class SessionManager(object):
 
         """
         if "Authorization" not in self.session.headers:
-            self._login_oauth2()
+            self._login_oauth2(mfa_code=mfa_code)
         elif self.refresh_token is not None and (
             self.expires_at < datetime.now() or force_refresh
         ):
@@ -315,7 +315,7 @@ class SessionManager(object):
                 "Authorization result body missing required responses."
             )
 
-    def _login_oauth2(self) -> None:
+    def _login_oauth2(self, mfa_code=None) -> None:
         """Create a new oauth2 token.
 
         Raises:
@@ -377,8 +377,9 @@ class SessionManager(object):
                 auto_login=False,
             )
         elif "mfa_required" in res:
-            print(f"Input mfa code:")
-            mfa_code = input()
+            if not mfa_code:
+                print(f"Input mfa code:")
+                mfa_code = input()
             oauth_payload["mfa_code"] = mfa_code
             res = self.post(
                 OAUTH_TOKEN_URL,
